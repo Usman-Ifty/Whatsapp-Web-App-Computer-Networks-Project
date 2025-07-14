@@ -1,14 +1,5 @@
 # Whatsapp-Web-App-Computer-Networks-Project
 A full-stack, real-time chat application inspired by WhatsApp Web, built with Node.js, Express, MongoDB, and Socket.io. The app supports group and private messaging, file sharing, user authentication, and profile management.
-
-Certainly! Here’s a professional, comprehensive project overview and documentation you can use for your GitHub repository. This will help others understand your project, its features, setup, and usage.
-
----
-
-# whatsappWebApp
-
-A full-stack, real-time chat application inspired by WhatsApp Web, built with Node.js, Express, MongoDB, and Socket.io. The app supports group and private messaging, file sharing, user authentication, and profile management.
-
 ---
 
 ## Features
