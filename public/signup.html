@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Signup - Whatsapp Web application</title>
+    <link rel="stylesheet" href="css/style.css" />
+    <link rel="shortcut icon" href="img/icons8-chat-64.png" type="image/x-icon" />
+    <style>
+        body.signup-bg {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #e9f5ec 0%, #d9fdd3 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .signup-card {
+            background: var(--glass-bg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            padding: 44px 36px 36px 36px;
+            max-width: 410px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: box-shadow var(--transition), background var(--transition);
+        }
+        .signup-logo {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 20px;
+            border-radius: 50%;
+            box-shadow: 0 2px 12px rgba(7,94,84,0.13);
+            background: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .signup-title {
+            color: var(--primary-dark);
+            font-size: 1.7rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-align: center;
+            letter-spacing: 0.5px;
+        }
+        .auth-form {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .auth-form input {
+            margin-bottom: 0;
+        }
+        .auth-form button.btn {
+            width: 100%;
+            margin-top: 10px;
+        }
+        .signup-link {
+            text-align: center;
+            margin-top: 22px;
+            color: var(--primary-dark);
+        }
+        .signup-link a {
+            color: var(--primary);
+            font-weight: 500;
+            transition: color var(--transition);
+        }
+        .signup-link a:hover {
+            color: var(--accent);
+        }
+        .profile-pic-preview {
+            width: 74px;
+            height: 74px;
+            border-radius: 50%;
+            background-size: cover;
+            background-position: center;
+            margin: 0 auto 14px auto;
+            box-shadow: 0 2px 8px rgba(7,94,84,0.10);
+            border: 3px solid var(--primary);
+            transition: box-shadow 0.2s, border 0.2s;
+        }
+        .profile-pic-preview:hover {
+            box-shadow: 0 4px 16px rgba(37,211,102,0.18);
+            border: 3px solid var(--accent);
+        }
+        .choose-pic-label {
+            cursor: pointer;
+            color: var(--primary-dark);
+            font-size: 1.05em;
+            font-weight: 500;
+            margin-bottom: 8px;
+            display: block;
+            text-align: center;
+            transition: color var(--transition);
+        }
+        .choose-pic-label:hover {
+            color: var(--primary);
+        }
+        @media (max-width: 500px) {
+            .signup-card {
+                padding: 20px 4vw 16px 4vw;
+            }
+        }
+    </style>
+</head>
+<body class="signup-bg">
+   <div class="signup-card">
+      <div class="signup-logo">
+         <img src="img/icons8-chat-64.png" alt="Logo" style="width:60px;height:60px;" />
+      </div>
+      <div class="signup-title">Create your account</div>
+      <form id="signup-form" class="auth-form" enctype="multipart/form-data" autocomplete="off">
+         <div id="signup-profile-pic-preview" class="profile-pic-preview" style="background-image:url('img/default-profile.png');"></div>
+         <label for="signup-profile-pic-input" class="choose-pic-label">Choose profile picture</label>
+         <input type="file" id="signup-profile-pic-input" accept="image/*" style="display:none;" />
+         <input type="email" id="signup-email" placeholder="Email" required autocomplete="email" />
+         <input type="text" id="signup-username" placeholder="Username" required autocomplete="username" />
+         <input type="password" id="signup-password" placeholder="Password" required autocomplete="new-password" />
+         <button type="submit" class="btn btn-primary">Sign Up</button>
+         <div id="signup-error" style="color:#d32f2f;margin-top:8px;font-size:0.98em;"></div>
+      </form>
+      <div class="signup-link">Already have an account? <a href="login.html">Login</a></div>
+   </div>
+   <script src="https://cdn.jsdelivr.net/npm/qs@6.11.2/dist/qs.min.js"></script>
+   <script src="/socket.io/socket.io.js"></script>
+   <script>
+   // Add dark mode toggle button
+   (function() {
+     const btn = document.createElement('button');
+     btn.textContent = '🌙';
+     btn.title = 'Toggle dark mode';
+     btn.style.position = 'fixed';
+     btn.style.top = '18px';
+     btn.style.right = '18px';
+     btn.style.zIndex = 1000;
+     btn.style.background = '#25d366';
+     btn.style.color = '#181c1f';
+     btn.style.border = 'none';
+     btn.style.borderRadius = '50%';
+     btn.style.width = '40px';
+     btn.style.height = '40px';
+     btn.style.fontSize = '1.3em';
+     btn.style.cursor = 'pointer';
+     btn.style.boxShadow = '0 2px 8px rgba(0,0,0,0.12)';
+     btn.style.transition = 'background 0.2s, color 0.2s';
+     btn.onclick = function() {
+       document.body.classList.toggle('dark-mode');
+       localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
+       btn.textContent = document.body.classList.contains('dark-mode') ? '☀️' : '🌙';
+     };
+     document.body.appendChild(btn);
+     // Set initial state
+     if (localStorage.getItem('darkMode') === 'true') {
+       document.body.classList.add('dark-mode');
+       btn.textContent = '☀️';
+     }
+   })();
+   // Profile pic preview
+   const signupProfilePicInput = document.getElementById('signup-profile-pic-input');
+   const signupProfilePicPreview = document.getElementById('signup-profile-pic-preview');
+   if (signupProfilePicInput && signupProfilePicPreview) {
+     signupProfilePicInput.addEventListener('change', function() {
+         const file = signupProfilePicInput.files[0];
+         if (file) {
+             const reader = new FileReader();
+             reader.onload = function(e) {
+                 signupProfilePicPreview.style.backgroundImage = `url('${e.target.result}')`;
+             };
+             reader.readAsDataURL(file);
+         }
+     });
+     // Clicking the preview or label opens file dialog
+     document.querySelector('.choose-pic-label').onclick = function() {
+       signupProfilePicInput.click();
+     };
+     signupProfilePicPreview.onclick = function() {
+       signupProfilePicInput.click();
+     };
+   }
+   const signupForm = document.getElementById('signup-form');
+   if (signupForm) {
+     signupForm.addEventListener('submit', async function(e) {
+         e.preventDefault();
+         const email = document.getElementById('signup-email').value.trim();
+         const username = document.getElementById('signup-username').value.trim();
+         const password = document.getElementById('signup-password').value;
+         const errorDiv = document.getElementById('signup-error');
+         errorDiv.textContent = '';
+         const formData = new FormData();
+         formData.append('email', email);
+         formData.append('username', username);
+         formData.append('password', password);
+         if (signupProfilePicInput && signupProfilePicInput.files[0]) {
+             formData.append('profilePic', signupProfilePicInput.files[0]);
+         }
+         try {
+             const res = await fetch('/signup', {
+                 method: 'POST',
+                 body: formData
+             });
+             const data = await res.json();
+             if (res.ok) {
+                 window.location.href = 'login.html';
+             } else {
+                 errorDiv.textContent = data.message || 'Signup failed.';
+             }
+         } catch (err) {
+             errorDiv.textContent = 'Server error.';
+         }
+     });
+   }
+   </script>
+</body>
+</html> 

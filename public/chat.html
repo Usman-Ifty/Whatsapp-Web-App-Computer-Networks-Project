@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+   <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link
+         rel="shortcut icon"
+         href="img/icons8-chat-64.png"
+         type="image/x-icon"
+      />
+      <link
+         rel="stylesheet"
+         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/all.min.css"
+         integrity="sha256-mmgLkCYLUQbXn0B1SRqzHar6dCnv9oZFPEC1g1cwlkk="
+         crossorigin="anonymous"
+      />
+      <link rel="stylesheet" href="css/style.css" />
+      <!-- Emoji Picker CSS -->
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/emoji-mart@latest/css/emoji-mart.css">
+      <title>Whatsapp Web application</title>
+   </head>
+   <body>
+      <script>
+      // Early param check: redirect if chat params are missing or invalid
+      (function() {
+        const params = new URLSearchParams(window.location.search);
+        const type = params.get('type');
+        const user = params.get('user');
+        const room = params.get('room');
+        if (!type || (type === 'private' && !user) || (type === 'group' && !room)) {
+          window.location.href = 'dashboard.html';
+        }
+      })();
+      </script>
+      <div class="chat-layout">
+         <aside class="sidebar">
+            <img src="img/icons8-chat-64.png" alt="Whatsapp Logo" style="width:48px;height:48px;margin-bottom:12px;" />
+            <form id="profile-pic-form" enctype="multipart/form-data" style="display: flex; flex-direction: column; align-items: center;">
+               <label for="profile-pic-input" style="cursor:pointer;">
+                  <div class="profile-pic" id="profile-pic-sidebar"></div>
+               </label>
+               <input type="file" id="profile-pic-input" name="profilePic" accept="image/*" style="display:none;" />
+            </form>
+            <div class="user-info">
+               <div id="sidebar-username" class="sidebar-username"></div>
+               <div id="sidebar-email" class="sidebar-email"></div>
+            </div>
+         </aside>
+         <div class="chat-container">
+            <header class="chat-header">
+               <h1 style="color: #f5f6f7">
+                  <i class="fas fa-comment-dots"></i> Whatsapp Web application
+               </h1>
+               <a href="dashboard.html" class="btn">Back to Dashboard</a>
+            </header>
+            <main class="chat-main">
+               <div class="chat-sidebar">
+                  <h3><i class="fas fa-comments"></i> Room Name:</h3>
+                  <h2 id="room-name"></h2>
+                  <h3><i class="fas fa-users"></i> Users</h3>
+                  <ul id="users"></ul>
+               </div>
+               <div class="chat-messages"></div>
+            </main>
+            <div class="chat-form-container">
+               <form id="chat-form">
+                  <div class="message-options">
+                     <input
+                        id="msg"
+                        type="text"
+                        placeholder="Enter Message"
+                        required
+                        autocomplete="off"
+                     />
+                     <button type="button" id="emoji-button" title="Add emoji"><i class="fas fa-smile"></i></button>
+                     <button type="button" id="add-file-button"><i class="fas fa-plus"></i></button>
+                     <div id="file-options" class="file-options hidden">
+                        <button id="upload-picture" type="button" class="file-option"><i class="fas fa-image"></i> Upload Picture</button>
+                        <button id="upload-file" type="button" class="file-option"><i class="fas fa-paperclip"></i> Upload File</button>
+                        <input type="file" id="file-input" style="display: none;">
+                    </div>
+                    <div id="emoji-picker-container" class="emoji-picker-container hidden"></div>
+                    <div id="uploaded-file-container"></div>
+                    <span id="selected-file-name" style="margin-left:12px;color:#3f72af;font-size:0.98em;"></span>
+                  </div>
+                  <button class="btn send-button">
+                     <i class="fas fa-paper-plane"></i> Send
+                  </button>
+               </form>
+            </div>
+            <footer style="margin-top: 25px">
+               <div style="text-align: center; color: #f5f6f7" class="credit">
+                  &copy; Whatsapp Web application - All Rights Reserved 
+               </div>
+            </footer>
+         </div>
+      <script
+         src="https://cdnjs.cloudflare.com/ajax/libs/qs/6.10.1/qs.min.js"
+         integrity="sha512-aTKlYRb1QfU1jlF3k+aS4AqTpnTXci4R79mkdie/bp6Xm51O5O3ESAYhvg6zoicj/PD6VYY0XrYwsWLcvGiKZQ=="
+         crossorigin="anonymous"
+      ></script>
+      <script src="/socket.io/socket.io.js"></script>
+      <script src="https://cdn.jsdelivr.net/npm/qs@6.11.2/dist/qs.min.js"></script>
+      <!-- Emoji Picker JS -->
+      <script src="https://cdn.jsdelivr.net/npm/emoji-mart@latest/dist/browser.js"></script>
+      <script src="js/script.js"></script>
+      <script>
+      // Show a friendly error if chat params are missing
+      (function() {
+        const params = Qs.parse(location.search, { ignoreQueryPrefix: true });
+        const chatType = params.type;
+        const chatTarget = chatType === 'private' ? params.user : params.room;
+        if (!chatType || !chatTarget) {
+          document.querySelector('.chat-container').innerHTML = `
+            <div style="padding:48px;text-align:center;">
+              <img src='img/icons8-chat-64.png' style='width:60px;opacity:0.3;display:block;margin:0 auto 18px auto;'/>
+              <h2 style='color:#075e54;'>No chat selected</h2>
+              <p style='color:#888;'>Please select a personal or group chat from the dashboard.</p>
+              <a href='dashboard.html' class='btn' style='margin-top:18px;'>Back to Dashboard</a>
+            </div>
+          `;
+        }
+      })();
+      // Fetch user info for sidebar
+      fetch('/api/me').then(res => res.json()).then(user => {
+         document.getElementById('sidebar-username').textContent = user.username;
+         document.getElementById('sidebar-email').textContent = user.email;
+      });
+      // Profile pic upload logic (reuse from dashboard)
+      const profilePicInput = document.getElementById('profile-pic-input');
+      const profilePicSidebar = document.getElementById('profile-pic-sidebar');
+      profilePicInput.addEventListener('change', async function() {
+         const formData = new FormData();
+         formData.append('profilePic', profilePicInput.files[0]);
+         const res = await fetch('/api/profile-pic', { method: 'POST', body: formData });
+         const data = await res.json();
+         if (data.url) {
+            profilePicSidebar.style.backgroundImage = `url('${data.url}')`;
+            // Also update all avatars for this user in chat
+            document.querySelectorAll('.msg-avatar').forEach(el => {
+               if (el.parentElement.querySelector('.meta')?.textContent?.startsWith(document.getElementById('sidebar-username').textContent)) {
+                  el.style.backgroundImage = `url('${data.url}')`;
+               }
+            });
+         }
+      });
+      // Load profile pic if available
+      fetch('/api/me').then(res => res.json()).then(user => {
+         document.getElementById('sidebar-username').textContent = user.username;
+         document.getElementById('sidebar-email').textContent = user.email;
+         if (user.profilePicUrl) {
+            profilePicSidebar.style.backgroundImage = `url('${user.profilePicUrl}')`;
+         }
+      });
+      </script>
+   </body>
+</html>

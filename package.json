@@ -1,0 +1,28 @@
+{
+   "name": "ChatApplication",
+   "version": "1.0.0",
+   "description": "",
+   "main": "app.js",
+   "scripts": {
+      "test": "echo \"Error: no test specified\" && exit 1",
+      "start": "node app.js"
+   },
+   "keywords": [],
+   "author": "Mehedi Islam Ripon",
+   "license": "ISC",
+   "dependencies": {
+      "bcryptjs": "^3.0.2",
+      "connect-mongo": "^5.1.0",
+      "express": "^4.17.1",
+      "express-session": "^1.18.1",
+      "jsonwebtoken": "^9.0.2",
+      "moment-timezone": "^0.5.33",
+      "mongoose": "^8.16.2",
+      "multer": "^1.4.5-lts.1",
+      "open": "^10.1.0",
+      "socket.io": "^4.1.1"
+   },
+   "engines": {
+      "node": ">=10.0.0"
+   }
+}

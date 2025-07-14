@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard - Whatsapp Web application</title>
+    <link rel="stylesheet" href="css/style.css" />
+    <link rel="shortcut icon" href="img/icons8-chat-64.png" type="image/x-icon" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+</head>
+<body>
+    <script>
+    // Add dark mode toggle button
+    (function() {
+      const btn = document.createElement('button');
+      btn.textContent = '🌙';
+      btn.title = 'Toggle dark mode';
+      btn.style.position = 'fixed';
+      btn.style.top = '18px';
+      btn.style.right = '18px';
+      btn.style.zIndex = 1000;
+      btn.style.background = '#25d366';
+      btn.style.color = '#181c1f';
+      btn.style.border = 'none';
+      btn.style.borderRadius = '50%';
+      btn.style.width = '40px';
+      btn.style.height = '40px';
+      btn.style.fontSize = '1.3em';
+      btn.style.cursor = 'pointer';
+      btn.style.boxShadow = '0 2px 8px rgba(0,0,0,0.12)';
+      btn.style.transition = 'background 0.2s, color 0.2s';
+      btn.onclick = function() {
+        document.body.classList.toggle('dark-mode');
+        localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
+        btn.textContent = document.body.classList.contains('dark-mode') ? '☀️' : '🌙';
+      };
+      document.body.appendChild(btn);
+      // Set initial state
+      if (localStorage.getItem('darkMode') === 'true') {
+        document.body.classList.add('dark-mode');
+        btn.textContent = '☀️';
+      }
+    })();
+    </script>
+    <div class="dashboard-layout" id="dashboard-main" style="opacity:0;pointer-events:none;">
+        <aside class="sidebar">
+            <img src="img/icons8-chat-64.png" alt="Whatsapp Logo" style="width:48px;height:48px;margin-bottom:12px;" />
+            <form id="profile-pic-form" enctype="multipart/form-data" style="display: flex; flex-direction: column; align-items: center;">
+               <label for="profile-pic-input" style="cursor:pointer;">
+                  <div class="profile-pic" id="profile-pic-sidebar"></div>
+               </label>
+               <input type="file" id="profile-pic-input" name="profilePic" accept="image/*" style="display:none;" />
+            </form>
+            <div class="user-info">
+                <div id="sidebar-username" class="sidebar-username"></div>
+                <div id="sidebar-email" class="sidebar-email"></div>
+            </div>
+        </aside>
+        <main class="dashboard-main">
+            <h2 style="text-align:center;">Welcome to Whatsapp Web application</h2>
+            <div class="dashboard-sections">
+                <div class="dashboard-section">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                        <i class="fa-solid fa-clock" style="color:#25d366;font-size:1.2em;"></i>
+                        <h3 style="margin:0;font-size:1.1em;">Recent Chats</h3>
+                    </div>
+                    <ul id="recent-list" class="dashboard-list"></ul>
+                    <hr style="border:none;border-top:1px solid #e0e0e0;margin:18px 0 12px 0;" />
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                        <i class="fa-solid fa-user" style="color:#3f72af;font-size:1.2em;"></i>
+                        <h3 style="margin:0;font-size:1.1em;">Personal Chats</h3>
+                    </div>
+                    <ul id="user-list" class="dashboard-list"></ul>
+                </div>
+                <div class="dashboard-section">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                        <i class="fa-solid fa-users" style="color:#25d366;font-size:1.2em;"></i>
+                        <h3 style="margin:0;font-size:1.1em;">Group Chats</h3>
+                    </div>
+                    <ul id="group-list" class="dashboard-list"></ul>
+                    <button id="create-group-btn" class="btn" style="background:#25d366; color:white; margin-top:10px;"><i class="fa-solid fa-plus"></i> Create New Group</button>
+                </div>
+            </div>
+        </main>
+    </div>
+    <!-- Group Creation Modal -->
+    <div id="group-modal" class="modal hidden">
+      <div class="modal-content">
+        <h2>Create New Group</h2>
+        <input type="text" id="group-name-input" placeholder="Enter group name" autocomplete="off" />
+        <div class="modal-actions">
+          <button id="group-create-btn" class="btn">Create</button>
+          <button id="group-cancel-btn" class="btn" style="background:#eee;color:#333;">Cancel</button>
+        </div>
+        <div id="group-modal-error" style="color:#d9534f;margin-top:10px;"></div>
+      </div>
+    </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qs@6.11.2/dist/qs.min.js"></script>
+    <script>
+    const socket = io();
+    socket.emit('dashboard');
+    let unread = { users: {}, groups: {} };
+    let currentChat = null;
+    // Fetch user info for sidebar
+    // Profile pic upload logic
+    const profilePicInput = document.getElementById('profile-pic-input');
+    const profilePicSidebar = document.getElementById('profile-pic-sidebar');
+    profilePicInput.addEventListener('change', async function() {
+       const formData = new FormData();
+       formData.append('profilePic', profilePicInput.files[0]);
+       const res = await fetch('/api/profile-pic', { method: 'POST', body: formData });
+       const data = await res.json();
+       if (data.url) {
+          profilePicSidebar.style.backgroundImage = `url('${data.url}')`;
+       }
+    });
+    // Load profile pic if available
+    fetch('/api/me').then(res => res.json()).then(user => {
+       document.getElementById('sidebar-username').textContent = user.username;
+       document.getElementById('sidebar-email').textContent = user.email;
+       if (user.profilePicUrl) {
+          profilePicSidebar.style.backgroundImage = `url('${user.profilePicUrl}')`;
+       }
+       // Store current user info globally
+       window.currentUser = user;
+    });
+    // Helper: Get initials from username
+    function getInitials(name) {
+      return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2);
+    }
+    // Helper: Avatar HTML
+    function avatarHTML(name, color, iconClass) {
+      return `<span class="avatar" style="background:${color}">${iconClass ? `<i class='${iconClass}'></i>` : getInitials(name)}</span>`;
+    }
+
+    // Helper: Create group HTML
+    function createGroupHTML(group, isCreator) {
+        const deleteBtn = isCreator ? `<button class="delete-group-btn" data-group-id="${group._id}" data-group-name="${group.name}" title="Delete group" style="background:none;border:none;color:#d9534f;cursor:pointer;font-size:1.1em;margin-left:8px;float:right;">🗑️</button>` : '';
+        return `<li><a href="chat.html?type=group&room=${encodeURIComponent(group.name)}" data-group="${group.name}">${avatarHTML(group.name, '#25d366', 'fa-solid fa-users')}${group.name}<span class="badge" id="badge-group-${group.name}"></span></a>${deleteBtn}</li>`;
+    }
+    // Fetch users, groups, and recent chats
+    async function fetchDashboardData() {
+        const userList = document.getElementById('user-list');
+        const groupList = document.getElementById('group-list');
+        const recentList = document.getElementById('recent-list');
+        userList.innerHTML = '<li>Loading...</li>';
+        groupList.innerHTML = '<li>Loading...</li>';
+        recentList.innerHTML = '<li>Loading...</li>';
+        try {
+            const [usersRes, groupsRes, recentRes] = await Promise.all([
+                fetch('/api/users'),
+                fetch('/api/groups'),
+                fetch('/api/recent')
+            ]);
+            const users = await usersRes.json();
+            const groups = await groupsRes.json();
+            const recent = await recentRes.json();
+            // Recent Chats
+            if (recent.length) {
+              recentList.innerHTML = recent.map(u => `<li><a href="chat.html?type=private&user=${encodeURIComponent(u.username)}" data-username="${u.username}">${avatarHTML(u.username, '#e0f7fa', 'fa-solid fa-user')}${u.username}<span class="badge" id="badge-user-${u.username}"></span></a></li>`).join('');
+            } else {
+              recentList.innerHTML = `<li style='text-align:center;padding:24px 0;'><img src='img/icons8-chat-64.png' style='width:40px;opacity:0.3;display:block;margin:0 auto 8px auto;'/><div>No recent chats yet</div></li>`;
+            }
+            // Personal Chats
+            if (users.length) {
+              userList.innerHTML = users.map(u => `<li><a href="chat.html?type=private&user=${encodeURIComponent(u.username)}" data-username="${u.username}">${avatarHTML(u.username, '#d9fdd3', 'fa-solid fa-user')}${u.username}<span class="badge" id="badge-user-${u.username}"></span></a></li>`).join('');
+            } else {
+              userList.innerHTML = `<li style='text-align:center;padding:24px 0;'><img src='img/icons8-chat-64.png' style='width:40px;opacity:0.3;display:block;margin:0 auto 8px auto;'/><div>No users found</div></li>`;
+            }
+            // Group Chats
+            if (groups.length) {
+              groupList.innerHTML = groups.map(g => {
+                const isCreator = g.creator && g.creator.username === window.currentUser?.username;
+                return createGroupHTML(g, isCreator);
+              }).join('');
+            } else {
+              groupList.innerHTML = `<li style='text-align:center;padding:24px 0;'><i class='fa-solid fa-users' style='font-size:2em;opacity:0.3;'></i><div>No groups found</div></li>`;
+            }
+        } catch (err) {
+            userList.innerHTML = '<li>Error loading users</li>';
+            groupList.innerHTML = '<li>Error loading groups</li>';
+            recentList.innerHTML = '<li>Error loading recent chats</li>';
+        }
+    }
+    fetchDashboardData();
+    // Modal logic
+    const groupModal = document.getElementById('group-modal');
+    const groupNameInput = document.getElementById('group-name-input');
+    const groupCreateBtn = document.getElementById('group-create-btn');
+    const groupCancelBtn = document.getElementById('group-cancel-btn');
+    const groupModalError = document.getElementById('group-modal-error');
+    document.getElementById('create-group-btn').onclick = function() {
+      groupModal.classList.remove('hidden');
+      groupNameInput.value = '';
+      groupModalError.textContent = '';
+      groupNameInput.focus();
+    };
+    groupCancelBtn.onclick = function() {
+      groupModal.classList.add('hidden');
+    };
+    groupCreateBtn.onclick = async function() {
+      const groupName = groupNameInput.value.trim();
+      if (!groupName) {
+        groupModalError.textContent = 'Group name is required.';
+        return;
+      }
+      groupCreateBtn.disabled = true;
+      groupModalError.textContent = '';
+      try {
+        const res = await fetch('/api/groups', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: groupName })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          groupModal.classList.add('hidden');
+          // Don't refresh dashboard - WebSocket event will handle it
+        } else {
+          groupModalError.textContent = data.message || 'Failed to create group.';
+        }
+      } catch (err) {
+        groupModalError.textContent = 'Server error.';
+      }
+      groupCreateBtn.disabled = false;
+    };
+    // Close modal on Escape key
+    document.addEventListener('keydown', function(e) {
+      if (!groupModal.classList.contains('hidden') && e.key === 'Escape') {
+        groupModal.classList.add('hidden');
+      }
+    });
+
+    // Listen for new message notifications
+    socket.on('dashboard-notification', ({ type, name }) => {
+        if (type === 'private') {
+            unread.users[name] = (unread.users[name] || 0) + 1;
+            const badge = document.getElementById('badge-user-' + name);
+            if (badge) badge.textContent = unread.users[name];
+        } else if (type === 'group') {
+            unread.groups[name] = (unread.groups[name] || 0) + 1;
+            const badge = document.getElementById('badge-group-' + name);
+            if (badge) badge.textContent = unread.groups[name];
+        }
+    });
+
+    // Listen for group creation events
+    socket.on('groupCreated', ({ group }) => {
+        // Add the new group to the list without refreshing the entire dashboard
+        const groupList = document.getElementById('group-list');
+        if (groupList && groupList.innerHTML !== '<li>Loading...</li>') {
+            const isCreator = group.creator && group.creator.username === window.currentUser?.username;
+            const newGroupHTML = createGroupHTML(group, isCreator);
+            
+            // If there's a "no groups" message, replace it
+            if (groupList.innerHTML.includes('No groups found')) {
+                groupList.innerHTML = newGroupHTML;
+            } else {
+                // Add to the beginning of the list
+                groupList.insertAdjacentHTML('afterbegin', newGroupHTML);
+            }
+            
+            // Show notification
+            showNotification(`New group "${group.name}" created!`, false);
+        }
+    });
+
+    // Listen for group deletion events
+    socket.on('groupDeleted', ({ groupId, groupName }) => {
+        // Remove the group from the list
+        const groupList = document.getElementById('group-list');
+        if (groupList) {
+            const groupItems = groupList.querySelectorAll('li');
+            groupItems.forEach(item => {
+                const link = item.querySelector('a[data-group]');
+                if (link && link.getAttribute('data-group') === groupName) {
+                    item.remove();
+                }
+            });
+            
+            // If no groups left, show "no groups" message
+            if (groupList.children.length === 0) {
+                groupList.innerHTML = `<li style='text-align:center;padding:24px 0;'><i class='fa-solid fa-users' style='font-size:2em;opacity:0.3;'></i><div>No groups found</div></li>`;
+            }
+            
+            // Show notification
+            showNotification(`Group "${groupName}" has been deleted.`, false);
+        }
+    });
+
+    // Clear badge when chat is opened
+    document.addEventListener('click', function(e) {
+        if (e.target.matches('a[data-username]')) {
+            const name = e.target.getAttribute('data-username');
+            unread.users[name] = 0;
+            const badge = document.getElementById('badge-user-' + name);
+            if (badge) badge.textContent = '';
+        }
+        if (e.target.matches('a[data-group]')) {
+            const name = e.target.getAttribute('data-group');
+            unread.groups[name] = 0;
+            const badge = document.getElementById('badge-group-' + name);
+            if (badge) badge.textContent = '';
+        }
+    });
+
+    // Handle group deletion
+    document.addEventListener('click', async function(e) {
+        if (e.target.classList.contains('delete-group-btn')) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const groupId = e.target.getAttribute('data-group-id');
+            const groupName = e.target.getAttribute('data-group-name');
+            
+            if (!confirm(`Are you sure you want to delete the group "${groupName}"? This action cannot be undone and will delete all messages in the group.`)) {
+                return;
+            }
+            
+            const btn = e.target;
+            btn.disabled = true;
+            btn.textContent = '⏳';
+            
+            try {
+                const res = await fetch(`/api/groups/${groupId}`, { method: 'DELETE' });
+                const data = await res.json();
+                
+                if (res.ok) {
+                    // Show success message
+                    showNotification('Group deleted successfully', false);
+                    // Don't refresh dashboard - WebSocket event will handle it
+                } else {
+                    showNotification(data.message || 'Failed to delete group', true);
+                }
+            } catch (err) {
+                showNotification('Server error while deleting group', true);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🗑️';
+            }
+        }
+    });
+
+    // Notification function
+    function showNotification(message, isError) {
+        const notification = document.createElement('div');
+        notification.textContent = message;
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: ${isError ? '#d9534f' : '#25d366'};
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 10000;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        `;
+        document.body.appendChild(notification);
+        setTimeout(() => notification.remove(), 3000);
+    }
+
+    // Animated welcome overlay for dashboard
+    window.addEventListener('DOMContentLoaded', function() {
+      const dashboard = document.getElementById('dashboard-main');
+      dashboard.style.opacity = 1;
+      dashboard.style.pointerEvents = 'auto';
+    });
+    </script>
+    <script src="js/script.js"></script>
+</body>
+</html> 
